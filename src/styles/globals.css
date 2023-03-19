@@ -22,7 +22,7 @@
   padding: 0;
   margin: 0;
   font-size: var(--font-size);
-  color: var(--font-dark);
+  /* color: var(--font-dark); */
 }
 
 html,

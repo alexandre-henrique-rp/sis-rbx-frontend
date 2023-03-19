@@ -3,24 +3,24 @@ import { NextPage } from "next";
 import { signIn } from "next-auth/react";
 import style from "@/styles/signin.module.css";
 import { FormEventHandler, useState } from "react";
-import { CtxOrReq } from "next-auth/client/_utils";
-import { getCsrfToken } from "next-auth/react";
+import { useToast } from "@chakra-ui/react";
 
 
 
 const Login: NextPage = (): JSX.Element => {
   const [user, setUser] = useState<string>("");
   const [pass, setPass] = useState<string>("");
+  const toast = useToast()
  
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
     e.preventDefault();
-    const res = await signIn("credentials", {
+    const res: any = await signIn("credentials", {
       email: user,
       password: pass,
-      redirect: false
+      redirect: true
     });
-    console.log(res);
+    console.log(res.status);
   };
 
   return (
