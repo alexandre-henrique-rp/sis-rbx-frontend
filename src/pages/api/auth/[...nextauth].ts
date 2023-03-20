@@ -1,80 +1,116 @@
-import NextAuth, { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
+/* eslint-disable no-undef */
+/* eslint-disable no-unreachable */
+/* eslint-disable no-undef */
+import axios from 'axios';
+import NextAuth from 'next-auth';
+import { Session } from 'next-auth/core/types';
+import CredentialsProvider from 'next-auth/providers/credentials';
 
-const AuthOptions: NextAuthOptions = {
+interface Credentials {
+  email: string;
+  password: string;
+}
+
+interface User {
+  jwt: string;
+  id: number;
+  name: string;
+  email: string;
+  confirmed: boolean;
+  blocked: boolean;
+}
+
+export default NextAuth({
   jwt: {
-    // secret: process.env.JWT_SIGNING_PRIVATE_KEY
-    secret: "1235654787852"
+    secret: process.env.JWT_SIGNING_PRIVATE_KEY,
   },
-
+  secret: process.env.NEXTAUTH_SECRET,
   session: {
-    strategy: "jwt",
-    maxAge: 4 * 60 * 60 // 4 hours
+    strategy: 'jwt',
+    maxAge: 4 * 60 * 60, // 4 hours
   },
   providers: [
     CredentialsProvider({
-      type: "credentials",
+      name: 'Credentials',
       credentials: {
-        // email: { label: "Email", type: "text", placeholder: "test@test.com" },
-        // password: { label: "Password", type: "password" }
+        email: { label: 'Email', type: 'text', placeholder: 'test@test.com' },
+        password: { label: 'Password', type: 'password' },
       },
-      async authorize(credentials: any, req: any) {
-        const { email, password } = credentials as {
-          email: string;
-          password: string;
-        };
-        const user = req.body;
-        console.log(credentials);
-        console.log(user);
-        //validate user from db
-        //if validate user from db = false
-        if (email !== "Alexandre" || password !== "1234") {
-          throw new Error("Credenciais invalida");
+      async authorize(credentials, req) {
+        const {email, password } = credentials as {
+          email: string,
+          password: string
         }
-        //if validate user from db = true
-        return { id: "123", name: "Alexandr H", email: "teste@teste.com" };
-      }
-    })
+        const data = {
+          identifier: email,
+          password: password,
+        };
+
+        const res = await axios({
+          url: process.env.NEXT_PUBLIC_STRAPI_API_URL + '/auth/local',
+          method: 'POST',
+          data: data,
+          headers: { 'Content-Type': 'application/json' },
+        });
+        try {
+          const { jwt, user } = await res.data;
+          const { confirmed, blocked, username, id, email } = await user;
+          const data = {
+            jwt: jwt,
+            id: id,
+            name: username,
+            email: email,
+            confirmed: confirmed,
+            blocked: blocked,
+          };
+
+          if (!jwt || !id || !username || !email) {
+            throw new Error('Usuario e senha incorreto');
+            return null;
+          }
+          return data;
+        } catch (e) {
+          console.log(e);
+          return null;
+        }
+      },
+    }),
   ],
   pages: {
-    signIn: "/auth/signin"
+    signIn: '/auth/signin',
     // signOut: '/auth/signout',
     // error: '/auth/error', // Error code passed in query string as ?error=
     // verifyRequest: '/auth/verify-request', // (used for check email message)
     // newUser: '/auth/new-user' // New users will be directed here on first sign in (leave the property out if not of interest)
   },
   callbacks: {
-    async jwt({ token, user }) {
+    jwt: ({ token, user }): any => {
       const isSignIn = !!user;
       const actualDateInSeconds = Math.floor(Date.now() / 1000);
       const tokenExpirationInSeconds = Math.floor(4 * 60 * 60); // 4 hours
-      console.log(user)
-
-      // se for login
+    
       if (isSignIn) {
-        // se nao tiver user ou não ter jwt ou não ter nome ou não ter email
-        if (!user || !user.jwt || !user.name || !user.email) {
-          //  mate o prosseso e desconsidere tudo
-          return Promise.resolve({});
+        if (!user?.jwt || !user?.id || !user?.name || !user?.email) {
+          return null;
         }
+    
         token.jwt = user.jwt;
         token.id = user.id;
         token.name = user.name;
         token.email = user.email;
         token.confirmed = user.confirmed;
         token.blocked = user.blocked;
-
-        token.expiration = Math.floor(
-          //expiração do tokem
-          actualDateInSeconds + tokenExpirationInSeconds,
-        );
+    
+        token.expiration = actualDateInSeconds + tokenExpirationInSeconds;
       } else {
-        if (!token?.expiration) return Promise.resolve({}); //se não exixtir o tmpo de expiração mate a navegação
-        if (actualDateInSeconds > token.expiration) return Promise.resolve({}); // se se a data atual for maior que o tmpo de expiração mate a navegação
+        if (!token?.expiration || actualDateInSeconds > token.expiration) {
+          return null;
+        }
       }
-      return Promise.resolve(token);
+    
+      return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }): Promise<Session> {
       if (
         !token?.jwt ||
         !token?.id ||
@@ -82,21 +118,17 @@ const AuthOptions: NextAuthOptions = {
         !token?.email ||
         !token?.expiration
       ) {
-        //se não exixtir o mate a navegação
-        return null;
+        throw new Error('Token inválido');
       }
-      const dataUser: any = {
-        id: token.id,
-        name: token.name,
-        email: token.email,
-        confirmed: token.confirmed,
-        blocked: token.blocked,
+    
+      session.user = {
+        id: token.id as number,
+        name: token.name as string,
+        email: token.email as string,
       };
-      session.token = token.jwt;
-      session.user = dataUser;
+    
+      session.token = token.jwt as string;
       return session;
     },
   },
-};
-
-export default NextAuth(AuthOptions);
+});
