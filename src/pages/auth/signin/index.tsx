@@ -3,14 +3,13 @@ import { NextPage } from "next";
 import { signIn } from "next-auth/react";
 import style from "@/styles/signin.module.css";
 import { FormEventHandler, useState } from "react";
-import { useToast } from "@chakra-ui/react";
+// import { useToast } from "@chakra-ui/react";
 
 
 
 const Login: NextPage = (): JSX.Element => {
   const [user, setUser] = useState<string>("");
   const [pass, setPass] = useState<string>("");
-  const toast = useToast()
  
 
   const handleSubmit: FormEventHandler<HTMLFormElement> = async (e) => {
