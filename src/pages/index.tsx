@@ -1,25 +1,17 @@
-import Head from 'next/head'
-import Image from 'next/image'
-import styles from '@/styles/Home.module.css'
-import { useSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react';
 
-
-export default function Home() {
-  const { data: session } = useSession()
-
-  console.log({session})
+export default function Painel() {
+  const { data: session, status } = useSession();
+  localStorage.setItem('token', JSON.stringify(session?.token));
+  localStorage.setItem('email', JSON.stringify(session?.user.email));
+  const Token: any = localStorage.getItem('token');
   return (
     <>
-      <Head>
-        <title>Sis Rbx</title>
-        <meta name="description" content="Sistema gestão de vendas" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-     <main>
-
-     <pre>{session && JSON.stringify(session, null, 2)}</pre>
-     </main>
+      <h1>Painel</h1>
+      <pre>{session && JSON.stringify(session, null, 2)}</pre>
+      <pre>{session && JSON.stringify(session?.user.name, null, 2)}</pre>
+      <pre>{JSON.stringify(status, null, 2)}</pre>
+      <pre>{JSON.stringify(JSON.parse(Token), null, 2)}</pre>
     </>
-  )
+  );
 }
